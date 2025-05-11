@@ -52,6 +52,48 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       });
     }
 
+    // "roll" command
+if (name === 'roll') {
+  const notation = data.options[0].value; // e.g., "2d20"
+  const match = notation.match(/^(\d+)d(\d+)$/i);
+
+  if (!match) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: '❌ Invalid notation. Use the format like 2d20 or 1d4.',
+      },
+    });
+  }
+
+  const [_, countStr, sidesStr] = match;
+  const count = parseInt(countStr);
+  const sides = parseInt(sidesStr);
+
+  if (count < 1 || count > 100 || sides < 2 || sides > 1000) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: '❌ Number of dice must be 1–100 and sides must be 2–1000.',
+      },
+    });
+  }
+
+  const rolls = [];
+  for (let i = 0; i < count; i++) {
+    rolls.push(Math.floor(Math.random() * sides) + 1);
+  }
+
+  const total = rolls.reduce((a, b) => a + b, 0);
+
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      content: `🎲 You rolled: ${rolls.join(', ')} (Total: ${total})`,
+    },
+  });
+}
+
     // "challenge" command
   if (name === 'challenge' && id) {
       // Interaction context
