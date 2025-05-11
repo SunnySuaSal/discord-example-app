@@ -44,6 +44,22 @@ const CHALLENGE_COMMAND = {
   contexts: [0, 2],
 };
 
-const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND];
+const ROLL_COMMAND = {
+  name: 'roll',
+  description: 'Roll a dice using DnD-style notation like 2d20, 1d4, etc.',
+  options: [
+    {
+      type: 3,
+      name: 'notation',
+      description: 'Dice notation (e.g., 2d20, 1d4)',
+      required: true,
+    },
+  ],
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 2],
+};
+
+const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND, ROLL_COMMAND];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
