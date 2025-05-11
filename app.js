@@ -53,41 +53,83 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
 
     // "challenge" command
-if (name === 'challenge' && id) {
-    // Interaction context
-    const context = req.body.context;
-    // User ID is in user field for (G)DMs, and member for servers
-    const userId = context === 0 ? req.body.member.user.id : req.body.user.id;
-    // User's object choice
-    const objectName = req.body.data.options[0].value;
+  if (name === 'challenge' && id) {
+      // Interaction context
+      const context = req.body.context;
+      // User ID is in user field for (G)DMs, and member for servers
+      const userId = context === 0 ? req.body.member.user.id : req.body.user.id;
+      // User's object choice
+      const objectName = req.body.data.options[0].value;
 
-    // Create active game using message ID as the game ID
-    activeGames[id] = {
-        id: userId,
-        objectName,
-    };
+      // Create active game using message ID as the game ID
+      activeGames[id] = {
+          id: userId,
+          objectName,
+      };
 
-    return res.send({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-        content: `Rock papers scissors challenge from <@${userId}>`,
-        components: [
-        {
-            type: MessageComponentTypes.ACTION_ROW,
-            components: [
+      return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+          content: `Rock papers scissors challenge from <@${userId}>`,
+          components: [
+          {
+              type: MessageComponentTypes.ACTION_ROW,
+              components: [
+              {
+                  type: MessageComponentTypes.BUTTON,
+                  // Append the game ID to use later on
+                  custom_id: `accept_button_${req.body.id}`,
+                  label: 'Accept',
+                  style: ButtonStyleTypes.PRIMARY,
+              },
+              ],
+          },
+          ],
+      },
+      });
+  }
+
+  if (type === InteractionType.MESSAGE_COMPONENT) {
+  // custom_id set in payload when sending message component
+  const componentId = data.custom_id;
+
+  if (componentId.startsWith('accept_button_')) {
+    // get the associated game ID
+    const gameId = componentId.replace('accept_button_', '');
+    // Delete message with token in request body
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/${req.body.message.id}`;
+    try {
+      await res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          // Fetches a random emoji to send from a helper function
+          content: 'What is your object of choice?',
+          // Indicates it'll be an ephemeral message
+          flags: InteractionResponseFlags.EPHEMERAL,
+          components: [
             {
-                type: MessageComponentTypes.BUTTON,
-                // Append the game ID to use later on
-                custom_id: `accept_button_${req.body.id}`,
-                label: 'Accept',
-                style: ButtonStyleTypes.PRIMARY,
+              type: MessageComponentTypes.ACTION_ROW,
+              components: [
+                {
+                  type: MessageComponentTypes.STRING_SELECT,
+                  // Append game ID
+                  custom_id: `select_choice_${gameId}`,
+                  options: getShuffledOptions(),
+                },
+              ],
             },
-            ],
+          ],
         },
-        ],
-    },
-    });
+      });
+      // Delete previous message
+      await DiscordRequest(endpoint, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  }
+  return;
 }
+
 
     console.error(`unknown command: ${name}`);
     return res.status(400).json({ error: 'unknown command' });
